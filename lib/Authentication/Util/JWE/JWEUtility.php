@@ -1,8 +1,6 @@
 <?php
 
-
 namespace CyberSource\Authentication\Util\JWE;
-
 
 use CyberSource\Authentication\Core\MerchantConfiguration;
 use Jose\Component\Core\AlgorithmManager;
@@ -15,9 +13,10 @@ use Jose\Component\Encryption\Serializer\CompactSerializer;
 use Jose\Component\Encryption\Serializer\JWESerializerManager;
 use Jose\Component\KeyManagement\JWKFactory;
 
-
-class JWEUtility {
-    private static function loadKeyFromPEMFile($path) {
+class JWEUtility
+{
+    private static function loadKeyFromPEMFile($path)
+    {
         return JWKFactory::createFromKeyFile(
             $path,
             '',                   // Secret if the key is encrypted
@@ -27,25 +26,21 @@ class JWEUtility {
         );
     }
 
-    public static function decryptJWEUsingPEM(MerchantConfiguration $merchantConfig, string $jweBase64Data) {
-        $filePath = $merchantConfig -> getJwePEMFileDirectory();
+    public static function decryptJWEUsingPEM(MerchantConfiguration $merchantConfig, string $jweBase64Data)
+    {
+        $filePath = $merchantConfig->getJwePEMFileDirectory();
         if (!file_exists($filePath)) {
             return null;
         }
-        $cacheKey = 'privateKeyFromPEMFile' . '_' . strtotime(date("F d Y H:i:s", filemtime($filePath)));
-        $cached_key = apcu_exists($cacheKey);
-        if (!$cached_key) {
-            $privateKeyFromPEMFile = self::loadKeyFromPEMFile($merchantConfig->getJwePEMFileDirectory());
-            apcu_store($cacheKey, $privateKeyFromPEMFile);
-        }
-        $jweKey = apcu_fetch($cacheKey);
+
+        $jweKey = self::loadKeyFromPEMFile($merchantConfig->getJwePEMFileDirectory());
         $serializerManager = new JWESerializerManager([
             new CompactSerializer(),
         ]);
 
         // The key encryption algorithm manager with the A256KW algorithm.
         $keyEncryptionAlgorithmManager = new AlgorithmManager([
-            new RSAOAEP256()
+            new RSAOAEP256(),
         ]);
 
         // The content encryption algorithm manager with the A256CBC-HS256 algorithm.
@@ -55,7 +50,7 @@ class JWEUtility {
 
         // The compression method manager with the DEF (Deflate) method.
         $compressionMethodManager = new CompressionMethodManager([
-            new Deflate()
+            new Deflate(),
         ]);
 
         $jweDecrypter = new JWEDecrypter(
@@ -65,12 +60,10 @@ class JWEUtility {
         );
 
         $jwe = $serializerManager->unserialize($jweBase64Data);
-        if($jweDecrypter -> decryptUsingKey($jwe, $jweKey, 0)) {
-            return $jwe ->getPayload();
+        if ($jweDecrypter->decryptUsingKey($jwe, $jweKey, 0)) {
+            return $jwe->getPayload();
         } else {
             return null;
         }
     }
 }
-
-?>
